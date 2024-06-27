@@ -22,11 +22,11 @@ import matplotlib.pyplot as plt
 
 def get_data():
     # Change the Path in the line below according to your own path
-    dataset = pd.read_csv('G:/Users/tinys/PycharmProjects/ObesityRiskAI/ObesityDataSet.csv')
+    dataset = pd.read_csv('G:\\Users\\tinys\PycharmProjects\Medical_Engineering_final_Project\src\\acquiredDataset.csv')
     dataset.head()
     print(dataset.head())
-    X = dataset.drop('NObeyesdad', axis=1)
-    y = dataset['NObeyesdad']
+    X = dataset.drop('classification', axis=1)
+    y = dataset['classification']
     print("Data Balance: " + str(y.value_counts()))
     plot_data_distribution(dataset)
     # Map target variable to numerical values using label encoding
@@ -81,7 +81,7 @@ def get_data():
 def plot_data_distribution(dataset):
     """plots the distribution of the target classes"""
     plt.figure(figsize = (8, 6))
-    sns.countplot(x = 'NObeyesdad', data = dataset)
+    sns.countplot(x = 'classification', data = dataset)
     plt.title('Distribution of Target Variable')
     plt.xlabel('Obesity Class')
     plt.ylabel('Count')
