@@ -3,11 +3,13 @@ Python project: Medical engineering final project;
 
 
 @author: Florian Zwicker
+Foe project describtion read readme.md
 
 """
 from PIL._imaging import display
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.decomposition import PCA
 
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -61,30 +63,36 @@ def get_data():
             ("num", numeric_transformer, numeric_features),
             ("cat", categorical_transformer, categorical_features)
         ])
+    pca = PCA(n_components = 2)
 
+
+    classifiers = {
+        'GradientBoostingClassifier': GradientBoostingClassifier(random_state = 42),
+        'LogisticRegression': LogisticRegression(random_state = 42),
+        'RandomForestClassifier': RandomForestClassifier(random_state = 42)
+    }
     # Define the classifier
-    classifier = Pipeline(steps=[
-        ("preprocessor", preprocessor),
-        ("classifier", RandomForestClassifier(random_state=42))
-    ])
+    for classifier_name, classifier in classifiers.items():
+        pipeline = Pipeline(steps = [('preprocessor', preprocessor),
+                                     ('pca', PCA(n_components = 2)),
+                                     ('classifier', classifier)])
+        # Train the model
+        classifier.fit(X_train, y_train)
 
-    # Train the model
-    classifier.fit(X_train, y_train)
+        # Make predictions
+        y_pred = classifier.predict(X_test)
 
-    # Make predictions
-    y_pred = classifier.predict(X_test)
+        # Evaluate the model
+        accuracy = accuracy_score(y_test, y_pred)
+        print(f"Accuracy: {accuracy:.2f}; " + str(classifier_name))
 
-    # Evaluate the model
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"Accuracy: {accuracy:.2f}")
+        # Reverse map numerical predictions to original categories for the classification report
+        reverse_mapping = {v: k for k, v in zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_))}
+        y_pred_labels = [reverse_mapping[val] for val in y_pred]
+        y_test_labels = [reverse_mapping[val] for val in y_test]
 
-    # Reverse map numerical predictions to original categories for the classification report
-    reverse_mapping = {v: k for k, v in zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_))}
-    y_pred_labels = [reverse_mapping[val] for val in y_pred]
-    y_test_labels = [reverse_mapping[val] for val in y_test]
-
-    # Print classification report
-    print("Classification Report:\n", classification_report(y_test_labels, y_pred_labels))
+        # Print classification report
+        print("Classification Report:\n", classification_report(y_test_labels, y_pred_labels))
 
 
 def plot_data_distribution(dataset):
