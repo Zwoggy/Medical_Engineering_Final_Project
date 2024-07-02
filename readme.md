@@ -1,31 +1,38 @@
 # Sleepy Driver EEG Brainwave Data Project
 
-This project aims to build a machine learning classifier for detecting whether a driver is sleeply by analyzing EEG brainwave data.
+This project is designed to build and evaluate a machine learning model capable of detecting whether a driver is sleepy based on Electroencephalography (EEG) brainwave data. 
 
-The dataset included in this project is consist of EEG signal data from 4 drivers while they were awake and asleep. For safety precautions, the signals are acquired while drivers were not actually driving. The drivers wore the [NeuroSky MindWave](http://neurosky.com) sensor for 5-8 minutes for each label (sleepy, not sleepy) and the signals were captured roughly every second. The signals are measured in units of microvolts squared per hertz (μV²/Hz).
+## Data Collection
+
+EEG signal data was collected from four different drivers while they were awake and asleep. To ensure safety, the data was collected in a controlled environment where the drivers were not actually driving. Each driver wore the [NeuroSky MindWave](http://neurosky.com) sensor headset for approximately 5-8 minutes per state (awake/asleep), and the signals were captured roughly every second. EEG signals are quantified in units of microvolts squared per hertz (μV²/Hz).
 
 ## Data Description
 
-These EEG signals were taken from a single location on each driver's forehead using the NeuroSky MindWave headset. The high signal values could be attributed to the single location method as opposed to medical-grade EEG devices that typically use multiple electrodes placed on different parts of the scalp.
+The EEG signals were collected from a single channel positioning on the drivers' forehead using the NeuroSky MindWave sensor headset. The use of single-channel EEG monitoring could account for the high signal values as clinical-grade EEG devices typically utilize multi-channel configurations. 
 
-It's important to note that there were no pre-processing done to the signals. Additional attributes like Attention and Meditation are calculated directly by the headset and somewhat considered to be unreliable.
+Additional attributes such as "Attention" and "Meditation" levels, calculated directly by the headset, are also available within the data. However, as these are headset-specific calculations, they might present varying levels of reliability across different individuals and scenarios. 
 
-For convenience, I have included a download link to the dataset: [Download the Dataset](https://elearning.th-wildau.de/pluginfile.php/570787/block_quickmail/attachments/31610/1716540497_attachments.zip?forcedownload=1)
+The dataset used for this project can be accessed via following link: [Download the Dataset](https://elearning.th-wildau.de/pluginfile.php/570787/block_quickmail/attachments/31610/1716540497_attachments.zip?forcedownload=1)
 
 ## Project Structure
 
-The final project deliverable will include:
+In the main python scripts, data from the EEG signals are first visualized to show their correlation and relation with the target variable (Classifications: Sleepy/Awake). Various machine learning classifiers are implemented and their performance is measured. Various preprocessing steps such as Label Encoding, train-test split, Data Resampling, Data Imputation, and Scaling are performed as part of training and testing our classifiers. There is also a function to train a simple Deep Neural Network.
 
-1. Python script (.py) or a link to a Git repository with the coding documentation.
-2. Documentation in the form of README.md following markdown syntaxes ([Markdown Basic Syntax](https://www.markdownguide.org/basic-syntax/))
-3. A requirements.txt file for setting up the Python environment ([Python Environment Setup](https://frankcorso.dev/setting-up-python-environment-venv-requirements.html))
+Main algorithms used:
+1. Logistic Regression
+2. RandomForestClassifier
+3. SVC (Support Vector Machine Classifier)
+4. k-Nearest Neighbors
+5. Gradient Boosting Classifier
 
-Additionally, the final presentation deliverable will include:
+This repository includes:
 
-1. A brief explanation of the project task.
-2. A description of the EEG method used and the basics of the EEG signal.
-3. Details about the dataset and the experiment conducted.
-4. Details about the machine learning model(s) used.
-5. The results from the data analysis.
-6. Conclusion
-7. References
+**Python script** - A .py file or a link to a Git repository containing the code utilized to analyze the data and execute the machine learning models.
+
+**Documentation** - A detailed README.md file which provides information associated with the project, its data, the methodology employed and results obtained.
+
+**Requirements.txt File** - A requirements.txt file outlining the necessary Python packages required to successfully run the Python script.
+
+## Contributions
+Author: Florian Zwicker
+

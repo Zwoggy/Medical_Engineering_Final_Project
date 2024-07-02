@@ -10,16 +10,25 @@ from PIL._imaging import display
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
-
+from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
+
+from keras.models import Sequential
+from keras.layers import Dense
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.metrics import adjusted_rand_score
+from sklearn.neighbors import KNeighborsClassifier
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import make_column_selector as selector
 
-
+import imblearn
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.pipeline import Pipeline, make_pipeline
 
 import pandas as pd
 from sklearn.metrics import classification_report, accuracy_score
@@ -29,6 +38,27 @@ import matplotlib.pyplot as plt
 
 
 def get_data():
+    """
+    This function loads the dataset from a specified path, performs data preprocessing (including encoding categorical variables, scaling numerical variables, handling missing values), visualizes the correlation heatmap and feature relationship, splits the dataset into training and testing data, and applies different classifiers after resampling.
+
+    It first imports data from a CSV file, then calls functions to create a heatmap and show feature relations.
+
+    The function maps the target variable to numerical values, splits the data, and applies a preprocessing transformation.
+
+    Then, it applies multiple classifiers (including GridSearchCV, GradientBoostingClassifier, LogisticRegression, RandomForestClassifier, SVC, KNeighborsClassifier), and for each classifier resampling is applied if specified.
+
+    Model training is performed, followed by making predictions and evaluating the model. The evaluation metrics include accuracy and the detailed classification report.
+
+    Note: The classifier and resampling methods are predefined in the code and could be customized according to specific requirements.
+
+    The function returns none but it prints out the output of the intermediate steps as well as the model performance measures.
+
+    Parameters:
+    None
+
+    Returns:
+    None
+    """
     # Change the Path in the line below according to your own path
     dataset = pd.read_csv('G:\\Users\\tinys\\PycharmProjects\\Medical_Engineering_final_Project\\src\\acquiredDataset.csv')
     dataset.head()
@@ -43,7 +73,7 @@ def get_data():
     # Map target variable to numerical values using label encoding
     label_encoder = LabelEncoder()
     y = label_encoder.fit_transform(y)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
 
     # Words in the data need to be changed to numerical values
     numeric_features = selector(dtype_exclude="object")
@@ -63,44 +93,75 @@ def get_data():
             ("num", numeric_transformer, numeric_features),
             ("cat", categorical_transformer, categorical_features)
         ])
+
     pca = PCA(n_components = 2)
-
-
-    classifiers = {
-        'GradientBoostingClassifier': GradientBoostingClassifier(random_state = 42),
-        'LogisticRegression': LogisticRegression(random_state = 42),
-        'RandomForestClassifier': RandomForestClassifier(random_state = 42)
+    logistic_regression = LogisticRegression(max_iter = 1000)
+    X = dataset.drop('classification', axis = 1)
+    y = dataset['classification']
+    param_grid = {
+        'penalty': ['l1', 'l2'],  # Regularization penalty
+        'C': [0.001, 0.01, 0.1, 1, 10],  # Inverse of regularization strength
+        'solver': ['liblinear', 'saga']
     }
-    # Define the classifier
-    for classifier_name, classifier in classifiers.items():
-        pipeline = Pipeline(steps = [('preprocessor', preprocessor),
-                                     ('pca', PCA(n_components = 2)),
-                                     ('classifier', classifier)])
-        # Train the model
-        classifier.fit(X_train, y_train)
+    classifiers = [
+        ("GradientBoostingClassifier", GradientBoostingClassifier(random_state = 42)),
+        ("GridSearchCV", GridSearchCV(LogisticRegression(random_state = 42, max_iter = 1000), param_grid, cv = 5, scoring = 'accuracy', n_jobs = -1)),
+        ("LogisticRegression", LogisticRegression(random_state = 42)),
+        ("RandomForestClassifier", RandomForestClassifier(random_state = 42)),
+        ("SVC", SVC(random_state = 42, degree=3, kernel='rbf')), # SVM classifier
+        ("knn", KNeighborsClassifier(n_neighbors = 3))
+    ]
+    """resampling for comparison if required"""
+    resampling = {
+        'None': None,
 
-        # Make predictions
-        y_pred = classifier.predict(X_test)
+        #'OverSampling': SMOTE(sampling_strategy = 'minority'),
+        #'UnderSampling': RandomUnderSampler(sampling_strategy = 'majority')
 
-        # Evaluate the model
-        accuracy = accuracy_score(y_test, y_pred)
-        print(f"Accuracy: {accuracy:.2f}; " + str(classifier_name))
+    }
 
-        # Reverse map numerical predictions to original categories for the classification report
-        reverse_mapping = {v: k for k, v in zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_))}
-        y_pred_labels = [reverse_mapping[val] for val in y_pred]
-        y_test_labels = [reverse_mapping[val] for val in y_test]
 
-        # Print classification report
-        print("Classification Report:\n", classification_report(y_test_labels, y_pred_labels))
+    for classifier_name, classifier in classifiers:
+        for resample_name, resampler in resampling.items():
+            if resampler is None:
+                model = Pipeline(steps = [
+                    ("preprocessor", preprocessor),
+                    #("pca", pca),
+                    ("classifier", classifier)
+                ])
+            else:
+                model = Pipeline(steps = [
+                    ("preprocessor", preprocessor),
+                    ("resampling", resampler),
+                    ("pca", pca),
+                    ("classifier", classifier)
+                ])
 
+            # Train the model
+            model.fit(X_train, y_train)
+
+            # Make predictions
+            y_pred = model.predict(X_test)
+
+            # Evaluate the model
+            accuracy = accuracy_score(y_test, y_pred)
+            print(f"Accuracy: {accuracy:.2f}; " + str(classifier_name))
+
+            # Reverse map numerical predictions to original categories for the classification report
+            reverse_mapping = {v: k for k, v in zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_))}
+            y_pred_labels = [reverse_mapping[val] for val in y_pred]
+            y_test_labels = [reverse_mapping[val] for val in y_test]
+
+            # Print classification report
+            print("Classification Report:\n", classification_report(y_test_labels, y_pred_labels))
+    train_dnn(X_train, y_train, X_test, y_test)
 
 def plot_data_distribution(dataset):
     """plots the distribution of the target classes"""
     plt.figure(figsize = (8, 6))
     sns.countplot(x = 'classification', data = dataset)
     plt.title('Distribution of Target Variable')
-    plt.xlabel('Obesity Class')
+    plt.xlabel('Drowsiness')
     plt.ylabel('Count')
     plt.show()
 
@@ -125,11 +186,36 @@ def get_metadata(dataframe):
     print("=" * 100)
 
 def create_heatmap(data):
+    """
+    Creates and displays a heatmap for the correlation matrix of the given data.
+
+    Parameters:
+    data : DataFrame
+        The data used to generate the correlation matrix and heatmap.
+
+    Returns:
+    None
+    """
     plt.figure(figsize = (20, 8))
     sns.heatmap(data.corr(), cmap = "YlGnBu", annot = True)
 
 
 def show_feature_relation(data):
+    """
+    Visualizes pairwise relationships in a dataset.
+    For each pair of features, filters the data to include only data points
+    that are above the 70th percentile for both features. Then generates a pair plot
+    from these data points, separated by classification.
+
+    Parameters:
+    data : DataFrame
+        The data used to generate the pair plot.
+        It is assumed to contain 'classification' column, and all other columns
+        are considered numeric features.
+
+    Returns:
+    None
+    """
     # Calculate the 70th percentile for each wave frequency band
     delta_70th = data['delta'].quantile(0.7)
     theta_70th = data['theta'].quantile(0.7)
@@ -169,6 +255,20 @@ def show_feature_relation(data):
 
 
 def do_logistic_regression(dataset):
+    """
+    Trains and evaluates a Logistic Regression classifier on the provided dataset.
+    Optimizes the hyperparameters of the model using grid search with 5-fold cross-validation.
+    The function will print the optimal hyperparameters, the best cross-validation accuracy, and the test set accuracy.
+    The classification target column in the dataset should be named 'classification'.
+
+    Parameters:
+    dataset : DataFrame
+        The dataset for training, validation and test.
+        Should contain a 'classification' column which will be used as the target variable.
+
+    Returns:
+    None
+    """
     # Create a Logistic Regression model
     logistic_regression = LogisticRegression(max_iter = 1000)
     X = dataset.drop('classification', axis = 1)
@@ -192,6 +292,37 @@ def do_logistic_regression(dataset):
     best_logistic_regression = grid_search.best_estimator_
     test_accuracy = best_logistic_regression.score(X, y)
     print("Test Accuracy: {:.2f}%".format(test_accuracy * 100))
+
+
+def train_dnn(X_train, y_train, X_test, y_test):
+    """
+    Trains a Deep Neural Network model on provided training data and evaluates it on test data.
+
+    Parameters:
+    X_train, X_test: DataFrame
+        Training and test feature data. The number of columns should be the same.
+    y_train, y_test: Series or array-like
+        Training and test target data. The length should correspond to the number of rows in X_train and X_test.
+
+    Returns:
+    history: History
+        Output of the Keras fit method. Contains details about the training process, including training and validation loss and accuracy at each epoch.
+
+    Note:
+    - This function assumes that binary cross-entropy loss is suitable for the given problem, which is only true for binary classification tasks. It may not be suitable for regression or multi-class classification.
+    - The DNN model architecture is defined within this function, and is fixed to two hidden layers with 32 and 16 nodes respectively. Depending upon the complexity of the dataset, you may need to adjust this architecture.
+    """
+
+    dnn_model = Sequential()
+    dnn_model.add(Dense(8, input_dim = len(X_train.columns), activation = 'relu'))  # Input layer
+    dnn_model.add(Dense(4, activation = 'relu'))  # Hidden layer
+    dnn_model.add(Dense(1, activation = 'sigmoid'))  # Output layer for binary classification
+
+    # Compile the model
+    dnn_model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    history = dnn_model.fit(X_train, y_train, epochs = 50, batch_size = 30, validation_data = (X_test, y_test))
+
+    return history
 
 
 if __name__ == "__main__":
